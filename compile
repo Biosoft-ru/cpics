@@ -1,0 +1,1 @@
+gcc -g -O2 -I /usr/local/include/ -L /usr/local/lib/ seg.c -o cpics -lhts -Wl,-rpath=/usr/local/lib
