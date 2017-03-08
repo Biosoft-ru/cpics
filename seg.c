@@ -22,6 +22,8 @@ struct InputData {
   struct SliceInterval U;//intervals for unmappable regions
 };
 
+#include "pics.c"
+
 void free_input_data(struct InputData* data) {
   free(data->P.s);
   free(data->N.s);
@@ -33,16 +35,7 @@ void free_input_data(struct InputData* data) {
     free(data->U.s);
 }
 
-void processSeg(struct InputData* seg) {
-
-  if(seg->P.e - seg->P.s < min_reads_in_region
-  || seg->N.e - seg->N.s < min_reads_in_region)
-    return;
-
-  int32_t regionLen = *(seg->N.e-1) - *(seg->P.s);
-  if(regionLen < min_l_region)
-    return;
-
+void printSeg(struct InputData* seg) {
   int32_t* a;
   printf("%s \n", seg->chr);
 
@@ -74,6 +67,27 @@ void processSeg(struct InputData* seg) {
       printf("M: %i %i \n", i->start, i->end);
   }
 
+}
+
+void processSeg(struct InputData* seg, struct InputData* data) {
+
+  if(seg->P.e - seg->P.s < min_reads_in_region
+  || seg->N.e - seg->N.s < min_reads_in_region)
+    return;
+
+  int32_t regionLen = *(seg->N.e-1) - *(seg->P.s);
+  if(regionLen < min_l_region)
+    return;
+
+  //printSeg(seg);
+
+  int32_t NF = data->P.e - data->P.s;
+  int32_t NR = data->N.e - data->N.s;
+  int32_t NFC = data->PC.e - data->PC.s;
+  int32_t NRC = data->NC.e - data->NC.s;
+  struct MixtureResult* mix = fitPICS(seg, NF+NR, NFC+NRC);
+  if(mix != 0)
+    printComponents(mix->comps, mix->nComp);
 }
 
 void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
@@ -163,7 +177,7 @@ void process_chr(struct InputData* data) {
         seg.P.s = sP.s;
       } else if(x - segXEnd > 2*width) {
         prepareSeg(&seg, data);
-        processSeg(&seg);
+        processSeg(&seg, data);
         seg.P.s = sP.s;
       }
       segXEnd = x;
@@ -173,6 +187,6 @@ void process_chr(struct InputData* data) {
   }
   if(segXEnd != -1) {//Last segment
      prepareSeg(&seg, data);
-     processSeg(&seg);
+     processSeg(&seg, data);
   }
 }

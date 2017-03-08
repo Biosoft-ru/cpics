@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <htslib/sam.h>
+#include <math.h>
+#include <gsl/gsl_statistics.h>
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_randist.h>
 
 #include "util.c"
 #include "args.c"
@@ -12,6 +17,8 @@
 int main(int argc, char* argv[]) {
   if(parse_args(argc, argv) != 0)
     return 1;
+
+  gsl_set_error_handler_off();
 
   struct BamReader exp_bam_reader;
   open_bam_reader(exp_bam_file_name, &exp_bam_reader);
