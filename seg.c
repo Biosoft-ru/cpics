@@ -23,6 +23,7 @@ struct InputData {
 };
 
 #include "pics.c"
+#include "infmat.c"
 
 void free_input_data(struct InputData* data) {
   free(data->P.s);
@@ -86,8 +87,12 @@ void processSeg(struct InputData* seg, struct InputData* data) {
   int32_t NFC = data->PC.e - data->PC.s;
   int32_t NRC = data->NC.e - data->NC.s;
   struct MixtureResult* mix = fitPICS(seg, NF+NR, NFC+NRC);
-  if(mix != 0)
+  if(mix != 0) {
+
+    double infMat[(5*mix->nComp-1)*(5*mix->nComp-1)];
+    getInfMat(seg, mix->comps, mix->nComp, infMat);
     printComponents(mix->comps, mix->nComp);
+  }
 }
 
 void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
