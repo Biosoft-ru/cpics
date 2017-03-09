@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     return 1;
 
   gsl_set_error_handler_off();
+  init_tdist4();
 
   struct BamReader exp_bam_reader;
   open_bam_reader(exp_bam_file_name, &exp_bam_reader);

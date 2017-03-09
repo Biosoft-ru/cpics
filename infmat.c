@@ -24,7 +24,7 @@ int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t nComp, d
       double fMu = c->mu - c->delta/2;
       double sigma = sqrt(c->sigmaSqF);
       double yNormF = (seg->P.s[i] - fMu)/sigma;
-      rF[j] = c->w * gsl_ran_tdist_pdf(yNormF, 4) /sigma;
+      rF[j] = c->w * tdist4(yNormF) /sigma;
       rFSum += rF[j];
     }
     for(j = 0; j < nComp; j++) {
@@ -85,7 +85,7 @@ int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t nComp, d
       double rMu = c->mu + c->delta/2;
       double sigma = sqrt(c->sigmaSqR);
       double yNormR = (seg->N.s[i] - rMu)/sigma;
-      rR[j] = c->w * gsl_ran_tdist_pdf(yNormR, 4) /sigma;
+      rR[j] = c->w * tdist4(yNormR) /sigma;
       rRSum += rR[j];
     }
     for(j = 0; j < nComp; j++) {

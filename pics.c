@@ -1,4 +1,15 @@
 
+#include <gsl/gsl_sf_gamma.h>
+static double TDIST4_F;
+static void init_tdist4() {
+  TDIST4_F = gsl_sf_gamma(2.5)/gsl_sf_gamma(2)/sqrt(4*M_PI);
+}
+static inline double tdist4(double x) {
+  double a = (1+0.25*x*x);
+  a=a*a*sqrt(a);
+  return TDIST4_F/a;
+}
+
 static struct EMParams {
   int32_t maxK;//Maximal number of mixture components
   double tol;
@@ -126,107 +137,95 @@ static void initPara(struct MixtureComp* comps, int32_t nComp, struct InputData*
   }
 }
 
+static inline void probMatrixF1(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
+  double* chi, double* nF, double* sF) {
+  memset(nF, 0, sizeof(double) * nComp);
+  memset(sF, 0, sizeof(double) * nComp);
+
+  int i,j;
+  double mu[nComp];
+  for(j = 0; j < nComp; j++)
+    mu[j] = comps[j].mu - 0.5*comps[j].delta;
+
+  for(i = 0; i < N; i++) {
+    double y = Y[i];
+    double rF[nComp];
+    double ruyF[nComp];
+    double rFSum = 0;
+    for(j = 0; j < nComp; j++) {
+      double sigmaSq = comps[j].sigmaSqF;
+      double a = y-mu[j];
+      a = 4*sigmaSq + a*a;
+      a = 1./a;
+      double b = sigmaSq*a;
+      double rFj = comps[j].w*b*b*sqrt(a);
+      rFSum += rFj;
+      rF[j] = rFj;
+      ruyF[j] = 5*a*rFj;
+    }
+    rFSum = 1./rFSum;
+    for(j = 0; j < nComp; j++) {
+      chi[j] += rF[j]*rFSum;
+      double ruyFj = ruyF[j]*rFSum;
+      nF[j] += ruyFj;
+      sF[j] += y * ruyFj;
+    }
+  }
+}
+
+static inline void probMatrixR1(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
+  double* chi, double* nR, double* sR) {
+  memset(nR, 0, sizeof(double) * nComp);
+  memset(sR, 0, sizeof(double) * nComp);
+
+  int i,j;
+  double mu[nComp];
+  for(j = 0; j < nComp; j++)
+    mu[j] = comps[j].mu + 0.5*comps[j].delta;
+
+  for(i = 0; i < N; i++) {
+    double y = Y[i];
+    double rR[nComp];
+    double ruyR[nComp];
+    double rRSum = 0;
+    for(j = 0; j < nComp; j++) {
+      double sigmaSq = comps[j].sigmaSqR;
+      double a = y-mu[j];
+      a = 4*sigmaSq + a*a;
+      a = 1./a;
+      double b = sigmaSq*a;
+      double rRj = comps[j].w*b*b*sqrt(a);
+      rRSum += rRj;
+      rR[j] = rRj;
+      ruyR[j] = 5*a*rRj;
+    }
+    rRSum = 1./rRSum;
+    for(j = 0; j < nComp; j++) {
+      chi[j] += rR[j]*rRSum;
+      double ruyRj = ruyR[j]*rRSum;
+      nR[j] += ruyRj;
+      sR[j] += y * ruyRj;
+    }
+  }
+}
+
 static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   int32_t NF = seg->P.e - seg->P.s;
   int32_t NR = seg->N.e - seg->N.s;
 
   double chi[nComp];
   memset(chi, 0, sizeof chi);
+
   double nF[nComp], sF[nComp];
-  memset(nF, 0, sizeof nF);
-  memset(sF, 0, sizeof sF);
-  //printf("rF:\n");
-  //printf("ruyF:\n");
-  int i,j;
-  for(i = 0; i < NF; i++) {
-    double rF[nComp];
-    double ruyF[nComp];
-    double rFSum = 0;
-    for(j = 0; j < nComp; j++) {
-      struct MixtureComp* c = comps + j;
-      double fMu = c->mu - c->delta/2;
-      double sigma = sqrt(c->sigmaSqF);
-      double yNormF = (seg->P.s[i] - fMu)/sigma;
-      rF[j] = c->w * gsl_ran_tdist_pdf(yNormF, 4) /sigma;
-      rFSum += rF[j];
-      ruyF[j] = 5.0/(4 + yNormF*yNormF);
-    }
-    for(j = 0; j < nComp; j++) {
-      rF[j] /= rFSum;
-      //printf(" %.4f", rF[j]);
-      ruyF[j] *= rF[j];
-    }
-    for(j = 0; j < nComp; j++) {
-      chi[j] += rF[j];
-      nF[j] += ruyF[j];
-      //printf(" %.4f", ruyF[j]);
-      sF[j] += seg->P.s[i] * ruyF[j];
-    }
-    //printf("\n");
-  }
-  for(j = 0; j < nComp; j++) {
-      nF[j] /= comps[j].sigmaSqF;
-      sF[j] /= comps[j].sigmaSqF;
-  }
+  probMatrixF1(comps, nComp, seg->P.s, NF, chi, nF, sF);
 
   double nR[nComp], sR[nComp];
-  memset(nR, 0, sizeof nR);
-  memset(sR, 0, sizeof sR);
-  //printf("rR:\n");
-  for(i = 0; i < NR; i++) {
-    double rR[nComp];
-    double ruyR[nComp];
-    double rRSum = 0;
-    for(j = 0; j < nComp; j++) {
-      struct MixtureComp* c = comps + j;
-      double rMu = c->mu + c->delta/2;
-      double sigma = sqrt(c->sigmaSqR);
-      double yNormR = (seg->N.s[i] - rMu)/sigma;
-      rR[j] = c->w * gsl_ran_tdist_pdf(yNormR, 4)/sigma;
-      rRSum += rR[j];
-      ruyR[j] = 5.0/(4 + yNormR*yNormR);
-    }
-    for(j = 0; j < nComp; j++) {
-      rR[j] /= rRSum;
-      //printf(" %.4f", rR[j]);
-      ruyR[j] *= rR[j];
-    }
-    for(j = 0; j < nComp; j++) {
-      chi[j] += rR[j];
-      nR[j] += ruyR[j];
-      sR[j] += seg->N.s[i] * ruyR[j];
-    }
-    //printf("\n");
-  }
-  for(j = 0; j < nComp; j++) {
-      nR[j] /= comps[j].sigmaSqR;
-      sR[j] /= comps[j].sigmaSqR;
-  }
+  probMatrixR1(comps, nComp, seg->N.s, NR, chi, nR, sR);
 
+  int j;
   for(j = 0; j < nComp; j++)
     comps[j].w = chi[j] / (NF + NR);
 
- //printf("nF:");
- //for(j = 0; j < nComp; j++)
- //  printf(" %.4f", nF[j]);
- //printf("\n");
-
- //printf("nR:");
- //for(j = 0; j < nComp; j++)
- //  printf(" %.4f", nR[j]);
- //printf("\n");
-
- //printf("sF:");
- //for(j = 0; j < nComp; j++)
- //  printf(" %.4f", sF[j]);
- //printf("\n");
-
- //printf("sR:");
- //for(j = 0; j < nComp; j++)
- //  printf(" %.4f", sR[j]);
- //printf("\n");
-
- //printf("ppp:");
   int32_t dim = 2*nComp;
   double AA[dim*dim];
   memset(AA, 0, sizeof AA);
@@ -236,12 +235,10 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
     AA[j*dim + (nComp+j)] = 0.5*(nR[j]-nF[j]);
     AA[(nComp+j)*dim + j] = nF[j]-nR[j];
     double ppp = 2*PriorParams.rho*(1.0/comps[j].sigmaSqF+1.0/comps[j].sigmaSqR);
-    //printf(" %.4f", ppp);
     AA[(nComp+j)*dim + (nComp+j)] = -0.5*(nR[j]+nF[j]) - ppp;
     BB[j] = sF[j] + sR[j];
     BB[j+nComp] = sF[j] - sR[j] - ppp*PriorParams.xi;
   }
-  //printf("\n");
 
   /** Solve the system via LU decomposition **/
   gsl_matrix_view gsl_AA = gsl_matrix_view_array(AA, dim, dim);
@@ -252,6 +249,7 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   double sol[dim];
   gsl_vector_view gsl_sol = gsl_vector_view_array(sol, dim);
   int status2 = gsl_linalg_LU_solve (&gsl_AA.matrix, perm, &gsl_BB.vector, &gsl_sol.vector);
+
     
   /** Copy the new values **/
   /** Check that we could invert the matrix, otherwise we do not update the values **/
@@ -262,76 +260,89 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
     }
 }
 
+static inline void probMatrixF2(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
+  double* chiF, double* etaF) {
+  memset(chiF, 0, sizeof(double) * nComp);
+  memset(etaF, 0, sizeof(double) * nComp);
+
+  int i,j;
+  double mu[nComp];
+  for(j = 0; j < nComp; j++)
+    mu[j] = comps[j].mu - 0.5*comps[j].delta;
+
+  for(i = 0; i < N; i++) {
+    double y = Y[i];
+    double rF[nComp];
+    double ruyF[nComp];
+    double rFSum = 0;
+    for(j = 0; j < nComp; j++) {
+      double sigmaSq = comps[j].sigmaSqF;
+      double d = y - mu[j];
+      d = d*d;
+      double a = 1./(4*sigmaSq + d);
+      double b = sigmaSq*a;
+      double rFj = comps[j].w*b*b*sqrt(a);
+      rFSum += rFj;
+      rF[j] = rFj;
+      ruyF[j] = 5*b*d*rFj;
+    }
+    rFSum = 1./rFSum;
+    for(j = 0; j < nComp; j++) {
+      chiF[j] += rF[j]*rFSum;
+      etaF[j] += ruyF[j]*rFSum;
+    }
+  }
+}
+
+static inline void probMatrixR2(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
+  double* chiR, double* etaR) {
+  memset(chiR, 0, sizeof(double) * nComp);
+  memset(etaR, 0, sizeof(double) * nComp);
+
+  int i,j;
+  double mu[nComp];
+  for(j = 0; j < nComp; j++)
+    mu[j] = comps[j].mu + 0.5*comps[j].delta;
+
+  for(i = 0; i < N; i++) {
+    double y = Y[i];
+    double rR[nComp];
+    double ruyR[nComp];
+    double rRSum = 0;
+    for(j = 0; j < nComp; j++) {
+      double sigmaSq = comps[j].sigmaSqR;
+      double d = y - mu[j];
+      d = d*d;
+      double a = 1./(4*sigmaSq + d);
+      double b = sigmaSq*a;
+      double rRj = comps[j].w*b*b*sqrt(a);
+      rRSum += rRj;
+      rR[j] = rRj;
+      ruyR[j] = 5*b*d*rRj;
+    }
+    rRSum = 1./rRSum;
+    for(j = 0; j < nComp; j++) {
+      chiR[j] += rR[j]*rRSum;
+      etaR[j] += ruyR[j]*rRSum;
+    }
+  }
+}
+
 static void ECM2(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   int32_t NF = seg->P.e - seg->P.s;
   int32_t NR = seg->N.e - seg->N.s;
 
   double chiF[nComp];
-  memset(chiF, 0, sizeof chiF);
   double etaF[nComp];
-  memset(etaF, 0, sizeof etaF);
-  int i,j;
-  for(i = 0; i < NF; i++) {
-    double rF[nComp];
-    double ruyF[nComp];
-    double rFSum = 0;
-    for(j = 0; j < nComp; j++) {
-      struct MixtureComp* c = comps + j;
-      double fMu = c->mu - c->delta/2;
-      double sigma = sqrt(c->sigmaSqF);
-      double yF = (seg->P.s[i] - fMu);
-      double yNormF = yF/sigma;
-      rF[j] = c->w * gsl_ran_tdist_pdf(yNormF, 4)/sigma;
-      rFSum += rF[j];
-    }
-    for(j = 0; j < nComp; j++) {
-      rF[j] /= rFSum;
-      struct MixtureComp* c = comps + j;
-      double fMu = c->mu - c->delta/2;
-      double sigma = sqrt(c->sigmaSqF);
-      double yF = (seg->P.s[i] - fMu);
-      double yNormF = yF/sigma;
-      ruyF[j] = (rF[j]*5.0/(4 + yNormF*yNormF))*yF*yF;
-    }
-    for(j = 0; j < nComp; j++) {
-      chiF[j] += rF[j];
-      etaF[j] += ruyF[j];
-    }
-  }
+  probMatrixF2(comps, nComp, seg->P.s, NF, chiF, etaF);
 
   double chiR[nComp];
-  memset(chiR, 0, sizeof chiR);
   double etaR[nComp];
-  memset(etaR, 0, sizeof etaR);
-  for(i = 0; i < NR; i++) {
-    double rR[nComp];
-    double ruyR[nComp];
-    double rRSum = 0;
-    for(j = 0; j < nComp; j++) {
-      struct MixtureComp* c = comps + j;
-      double rMu = c->mu + c->delta/2;
-      double sigma = sqrt(c->sigmaSqR);
-      double yNormR = (seg->N.s[i] - rMu)/sigma;
-      rR[j] = c->w * gsl_ran_tdist_pdf(yNormR, 4)/sigma;
-      rRSum += rR[j];
-    }
-    for(j = 0; j < nComp; j++) {
-      rR[j] /= rRSum;
-      struct MixtureComp* c = comps + j;
-      double rMu = c->mu + c->delta/2;
-      double sigma = sqrt(c->sigmaSqR);
-      double yR = (seg->N.s[i] - rMu);
-      double yNormR = yR/sigma;
-      ruyR[j] = (rR[j]*5.0/(4 + yNormR*yNormR))*yR*yR;
-    }
-    for(j = 0; j < nComp; j++) {
-      chiR[j] += rR[j];
-      etaR[j] += ruyR[j];
-    }
-  }
+  probMatrixR2(comps, nComp, seg->N.s, NR, chiR, etaR);
 
 
   double cc = 2*PriorParams.alpha - 1;
+  int j;
   for(j=0;j<nComp;j++)
   {
     double dd = comps[j].delta - PriorParams.xi;
@@ -361,15 +372,10 @@ static int32_t iterEM(struct MixtureComp* comps, int nComp, struct InputData* se
       old_mu[i] = comps[i].mu;
 
     ECM1(comps, nComp, seg);
-    //printf("ECM1 ITER%i:\n", iter);
-    //printComponents(comps, nComp);
 
     ECM2(comps, nComp, seg);
 
     qsort(comps, nComp, sizeof(struct MixtureComp), &cmp_mixture_comp_mu);
-
-    //printf("ECM2 ITER%i:\n", iter);
-    //printComponents(comps, nComp);
 
     double delta_sum = 0;
     for(i = 0; i < nComp; i++)
@@ -393,7 +399,7 @@ static double BIC(struct MixtureComp* comps, int nComp, struct InputData* seg) {
       double sigma = sqrt(comps[j].sigmaSqF);
       double mu = comps[j].mu - comps[j].delta/2;
       double yNorm = (seg->P.s[i] - mu)/sigma;
-      p += comps[j].w * gsl_ran_tdist_pdf(yNorm, 4)/sigma;// ??? /sigma
+      p += comps[j].w * tdist4(yNorm)/sigma;
     }
     bic += log(p);
   }
@@ -403,7 +409,7 @@ static double BIC(struct MixtureComp* comps, int nComp, struct InputData* seg) {
       double sigma = sqrt(comps[j].sigmaSqR);
       double mu = comps[j].mu + comps[j].delta/2;
       double yNorm = (seg->N.s[i] - mu)/sigma;
-      p += comps[j].w * gsl_ran_tdist_pdf(yNorm, 4)/sigma;// ??? /sigma
+      p += comps[j].w * tdist4(yNorm)/sigma;
     }
     bic += log(p);
   }
@@ -419,27 +425,19 @@ static int fitModel(int nComp, struct InputData* seg, struct MixtureResult* res)
   int32_t NR = seg->N.e - seg->N.s;
   
   if(nComp*minReadsPerPeak > min(NF, NR))
-  {
-    //printf("NOT ENOUGH READS\n");
     return 1; //Not enough reads
-  }
   
   initPara(res->comps, nComp, seg);
-  //printf("INIT:\n");
-  //printComponents(res->comps, nComp);
   int32_t iter = iterEM(res->comps, nComp, seg);
   res->converge = iter <= EMParams.B;
   
   //Handle the case of 'smallest weight too small'  
   int32_t i;
   for(i=0; i<nComp; i++)
-    if (res->comps[i].w < 1.0/max(NF,NR)) {
-      //printf("TOO SMALL WEIGHTS\n");
+    if (res->comps[i].w < 1.0/max(NF,NR))
       return 2; //too small weights
-    }
   
   res->BIC = BIC(res->comps, res->nComp, seg);
-  //printf("NCOMP:%i,BIC:%.4f\n", nComp, res->BIC);
 
   return 0;
 }  
