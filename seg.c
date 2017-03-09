@@ -100,6 +100,7 @@ void processSeg(struct InputData* seg, struct InputData* data) {
     mergePeaks(mix->comps, &mix->nComp, infMat);
     computeScores(mix->comps, mix->nComp, seg, NF+NR, NFC+NRC);
     output(mix->comps, mix->nComp, seg->chr);
+    freeMixtureResult(mix);
     //printComponents(mix->comps, mix->nComp);
   }
 }
