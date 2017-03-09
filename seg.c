@@ -24,6 +24,9 @@ struct InputData {
 
 #include "pics.c"
 #include "infmat.c"
+#include "merge.c"
+#include "score.c"
+#include "output.c"
 
 void free_input_data(struct InputData* data) {
   free(data->P.s);
@@ -90,8 +93,14 @@ void processSeg(struct InputData* seg, struct InputData* data) {
   if(mix != 0) {
 
     double infMat[(5*mix->nComp-1)*(5*mix->nComp-1)];
-    getInfMat(seg, mix->comps, mix->nComp, infMat);
-    printComponents(mix->comps, mix->nComp);
+    int flag = getInfMat(seg, mix->comps, mix->nComp, infMat);
+    if(flag != 0)
+      return;
+    memset(infMat, 0, sizeof infMat);// !!! zero infMat always???
+    mergePeaks(mix->comps, &mix->nComp, infMat);
+    computeScores(mix->comps, mix->nComp, seg, NF+NR, NFC+NRC);
+    output(mix->comps, mix->nComp, seg->chr);
+    //printComponents(mix->comps, mix->nComp);
   }
 }
 

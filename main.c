@@ -44,10 +44,12 @@ int main(int argc, char* argv[]) {
   int i;
   for(i = 0; i < nChr; i++) {
     char* exp_chr = exp_bam_reader.header->target_name[i];
-    char* ctrl_chr = ctrl_bam_reader.header->target_name[i];
-    if(strcmp(exp_chr, ctrl_chr) != 0) {
-      fprintf(stderr, "Distinct BAM headers in exp and ctrl files.\n");
-      return 1;
+    if(ctrl_bam_file_name != 0) {
+      char* ctrl_chr = ctrl_bam_reader.header->target_name[i];
+      if(strcmp(exp_chr, ctrl_chr) != 0) {
+        fprintf(stderr, "Distinct BAM headers in exp and ctrl files.\n");
+        return 1;
+      }
     }
 
     struct InputData data = {0};

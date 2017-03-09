@@ -34,7 +34,7 @@ static int minReadsPerPeak = 3;
 static int minReadsPerRegion = 4;
 
 struct MixtureComp {
-  double w, mu, delta, sigmaSqF, sigmaSqR, se, seF, seR;
+  double w, mu, delta, sigmaSqF, sigmaSqR, se, seF, seR, score;
 };
 
 struct MixtureResult {
@@ -77,6 +77,10 @@ void printComponents(struct MixtureComp* comps, int32_t nComp) {
   printf("seR:");
   for(i = 0; i < nComp; i++)
     printf(" %.4f", comps[i].seR);
+  printf("\n");
+  printf("score:");
+  for(i = 0; i < nComp; i++)
+    printf(" %.4f", comps[i].score);
   printf("\n");
 }
 
