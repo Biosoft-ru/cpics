@@ -91,17 +91,15 @@ void processSeg(struct InputData* seg, struct InputData* data) {
   int32_t NRC = data->NC.e - data->NC.s;
   struct MixtureResult* mix = fitPICS(seg, NF+NR, NFC+NRC);
   if(mix != 0) {
-
     double infMat[(5*mix->nComp-1)*(5*mix->nComp-1)];
     int flag = getInfMat(seg, mix->comps, mix->nComp, infMat);
-    if(flag != 0)
-      return;
-    memset(infMat, 0, sizeof infMat);// !!! zero infMat always???
-    mergePeaks(mix->comps, &mix->nComp, infMat);
-    computeScores(mix->comps, mix->nComp, seg, NF+NR, NFC+NRC);
-    output(mix->comps, mix->nComp, seg->chr);
+    if(flag == 0) {
+      memset(infMat, 0, sizeof infMat);// !!! zero infMat always???
+      mergePeaks(mix->comps, &mix->nComp, infMat);
+      computeScores(mix->comps, mix->nComp, seg, NF+NR, NFC+NRC);
+      output(mix->comps, mix->nComp, seg->chr);
+    }
     freeMixtureResult(mix);
-    //printComponents(mix->comps, mix->nComp);
   }
 }
 

@@ -68,7 +68,7 @@ int mergePeaks(struct MixtureComp* comps, int32_t* nComp, double* infMat)
     memset(B, 0, sizeof(double)*dim);
     memset(C, 0, sizeof(double)*dim);
     for(i=0;i<K0;i++)
-      if(I[iMerge*dim+i])
+      if(I[iMerge*K0+i])
       {
         A[K0-1+i] = origW[i]/SumW;
         B[K0-1+i] = origW[i]/SumW;

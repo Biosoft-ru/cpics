@@ -249,6 +249,7 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   double sol[dim];
   gsl_vector_view gsl_sol = gsl_vector_view_array(sol, dim);
   int status2 = gsl_linalg_LU_solve (&gsl_AA.matrix, perm, &gsl_BB.vector, &gsl_sol.vector);
+  gsl_permutation_free(perm);
 
     
   /** Copy the new values **/
@@ -456,6 +457,8 @@ static struct MixtureResult* fitPICS(struct InputData* seg, int32_t total_reads_
   for(nComp = 1; nComp <= maxComp && nDecreaseBIC < 2; nComp++) {
     struct MixtureResult* res = newMixtureResult(nComp);
     if(fitModel(nComp, seg, res) == 0 && res->BIC > bestBIC) {
+      if(best)
+        freeMixtureResult(best);
       best = copyMixtureResult(res);
       bestBIC = res->BIC;
       nDecreaseBIC = 0;

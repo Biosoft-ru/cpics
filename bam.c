@@ -18,6 +18,7 @@ static int open_bam_reader(char* file_name, struct BamReader* reader) {
 static void close_bam_reader(struct BamReader* reader) {
   if(reader->rec != 0)
     bam_destroy1(reader->rec);
+  bam_hdr_destroy(reader->header);
   sam_close(reader->file);
 }
 
