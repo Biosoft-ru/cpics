@@ -444,7 +444,7 @@ static int fitModel(int nComp, struct InputData* seg, struct MixtureResult* res)
 }  
 
 
-static struct MixtureResult* fitPICS(struct InputData* seg, int32_t total_reads_exp, int32_t total_reads_ctrl) {
+static struct MixtureResult* fitPICS(struct InputData* seg) {
   int32_t range = max(*(seg->P.e-1), *(seg->N.e-1)) - min(*(seg->P.s), *(seg->N.s));
   int32_t maxComp = (int32_t) 1 + range/(PriorParams.xi+4.0*sqrt(PriorParams.beta/PriorParams.alpha));
   if(maxComp > EMParams.maxK)

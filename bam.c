@@ -1,11 +1,13 @@
 
 struct BamReader {
+  char* file_name;
   samFile* file;
   bam_hdr_t* header;
   bam1_t* rec;
 };
 
 static int open_bam_reader(char* file_name, struct BamReader* reader) {
+  reader->file_name = strdup(file_name);
   reader->file = sam_open(file_name, "r");
   if(reader->file == 0)
     return 1;
@@ -20,6 +22,24 @@ static void close_bam_reader(struct BamReader* reader) {
     bam_destroy1(reader->rec);
   bam_hdr_destroy(reader->header);
   sam_close(reader->file);
+  free(reader->file_name);
+}
+
+int32_t count_mapped_reads(struct BamReader* reader) {
+  hts_idx_t* idx = sam_index_load(reader->file, reader->file_name);
+  int nChr = reader->header->n_targets;
+  int32_t total_mapped = 0;
+  int i;
+  for(i = 0; i < nChr; i++) {
+    uint64_t mapped, unmapped;
+    if( hts_idx_get_stat(idx, i, &mapped, &unmapped) != 0 || mapped > INT32_MAX - total_mapped) {
+      total_mapped = -1;
+      break;
+    }
+    total_mapped += mapped;
+  }
+  hts_idx_destroy(idx);
+  return total_mapped;
 }
 
 /* Reads single chromosome data from bam file, the bam should be sorted.

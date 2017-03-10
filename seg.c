@@ -73,7 +73,7 @@ void printSeg(struct InputData* seg) {
 
 }
 
-void processSeg(struct InputData* seg, struct InputData* data) {
+void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
 
   if(seg->P.e - seg->P.s < min_reads_in_region
   || seg->N.e - seg->N.s < min_reads_in_region)
@@ -83,20 +83,14 @@ void processSeg(struct InputData* seg, struct InputData* data) {
   if(regionLen < min_l_region)
     return;
 
-  //printSeg(seg);
-
-  int32_t NF = data->P.e - data->P.s;
-  int32_t NR = data->N.e - data->N.s;
-  int32_t NFC = data->PC.e - data->PC.s;
-  int32_t NRC = data->NC.e - data->NC.s;
-  struct MixtureResult* mix = fitPICS(seg, NF+NR, NFC+NRC);
+  struct MixtureResult* mix = fitPICS(seg);
   if(mix != 0) {
     double infMat[(5*mix->nComp-1)*(5*mix->nComp-1)];
     int flag = getInfMat(seg, mix->comps, mix->nComp, infMat);
     if(flag == 0) {
       memset(infMat, 0, sizeof infMat);// !!! zero infMat always???
       mergePeaks(mix->comps, &mix->nComp, infMat);
-      computeScores(mix->comps, mix->nComp, seg, NF+NR, NFC+NRC);
+      computeScores(mix->comps, mix->nComp, seg, exp_read_count, ctrl_read_count);
       output(mix->comps, mix->nComp, seg->chr);
     }
     freeMixtureResult(mix);
@@ -149,7 +143,7 @@ void prepareSeg(struct InputData* seg, struct InputData* data) {
   }
 }
 
-void process_chr(struct InputData* data) {
+void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
   int32_t* P = data->P.s;
   int32_t nP = data->P.e - data->P.s;
   int32_t* N = data->N.s;
@@ -190,7 +184,7 @@ void process_chr(struct InputData* data) {
         seg.P.s = sP.s;
       } else if(x - segXEnd > 2*width) {
         prepareSeg(&seg, data);
-        processSeg(&seg, data);
+        processSeg(&seg, data, exp_read_count, ctrl_read_count);
         seg.P.s = sP.s;
       }
       segXEnd = x;
@@ -200,6 +194,6 @@ void process_chr(struct InputData* data) {
   }
   if(segXEnd != -1) {//Last segment
      prepareSeg(&seg, data);
-     processSeg(&seg, data);
+     processSeg(&seg, data, exp_read_count, ctrl_read_count);
   }
 }
