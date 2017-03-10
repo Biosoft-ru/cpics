@@ -5,9 +5,10 @@ static int min_reads = 2;
 static int min_reads_in_region = 3;
 static int min_l_region = 100;
 static char *exp_bam_file_name = 0, *ctrl_bam_file_name = 0, *unmappable_file_name = 0;
+static const char* cpics_out_file_name = 0;
 
 static void usage() {
-  fprintf(stderr, "Usage: cpics [-u <unmappable bed file>] [-c <control bam file>] <bam file> \n" );
+  fprintf(stderr, "Usage: cpics [-u <unmappable bed file>] [-c <control bam file>] <bam file> <out file>\n" );
 }
 
 static int parse_args(int argc, char* argv[]) {
@@ -36,13 +37,16 @@ static int parse_args(int argc, char* argv[]) {
       }
     else {
       if(exp_bam_file_name != 0) {
-        fprintf(stderr, "extra argument %s\n", val); usage();
-        return 1;
-      }
-      exp_bam_file_name = val;
+        if(cpics_out_file_name != 0) {
+          fprintf(stderr, "extra argument %s\n", val); usage();
+          return 1;
+        }
+        cpics_out_file_name = val;
+      } else
+        exp_bam_file_name = val;
     }
   }
-  if(exp_bam_file_name == 0) {
+  if(exp_bam_file_name == 0 || cpics_out_file_name == 0) {
     usage();
     return 1;
   }

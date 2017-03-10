@@ -39,6 +39,18 @@ void free_input_data(struct InputData* data) {
     free(data->U.s);
 }
 
+void swap_exp_ctrl(struct InputData* data) {
+  struct SliceInt32 tmp;
+
+  tmp = data->P;
+  data->P = data->PC;
+  data->PC = tmp;
+
+  tmp = data->N;
+  data->N = data->NC;
+  data->NC = tmp;
+}
+
 void printSeg(struct InputData* seg) {
   int32_t* a;
   printf("%s \n", seg->chr);

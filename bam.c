@@ -32,7 +32,8 @@ int32_t count_mapped_reads(struct BamReader* reader) {
   int i;
   for(i = 0; i < nChr; i++) {
     uint64_t mapped, unmapped;
-    if( hts_idx_get_stat(idx, i, &mapped, &unmapped) != 0 || mapped > INT32_MAX - total_mapped) {
+    hts_idx_get_stat(idx, i, &mapped, &unmapped);
+    if( mapped > INT32_MAX - total_mapped) {
       total_mapped = -1;
       break;
     }
