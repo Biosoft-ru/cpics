@@ -20,6 +20,7 @@ struct InputData {
   struct SliceInt32 NC;//negative control
 
   struct SliceInterval U;//intervals for unmappable regions
+  struct Interval bounds;//window bounds during segmentation
 };
 
 #include "pics.c"
@@ -53,43 +54,46 @@ void swap_exp_ctrl(struct InputData* data) {
 
 void printSeg(struct InputData* seg) {
   int32_t* a;
-  printf("%s \n", seg->chr);
+  printf("%s\n", seg->chr);
 
-  printf("F: ");
+  printf("F:");
   for(a = seg->P.s; a < seg->P.e; a++)
-    printf("%i ", *a);
+    printf(" %i", *a);
   printf("\n");
 
-  printf("R: ");
+  printf("R:");
   for(a = seg->N.s; a < seg->N.e; a++)
-    printf("%i ", *a);
+    printf(" %i", *a);
   printf("\n");
 
   if(seg->PC.s) {
-    printf("CF: ");
+    printf("CF:");
     for(a = seg->PC.s; a < seg->PC.e; a++)
-      printf("%i ", *a);
+      printf(" %i", *a);
     printf("\n");
     
-    printf("CR: ");
+    printf("CR:");
     for(a = seg->NC.s; a < seg->NC.e; a++)
-      printf("%i ", *a);
+      printf(" %i", *a);
     printf("\n");
   }
 
   if(seg->U.s) {
+    int32_t minBound = seg->bounds.start;
+    int32_t maxBound = seg->bounds.end;
     struct Interval* i;
     for(i = seg->U.s; i < seg->U.e; i++)
-      printf("M: %i %i \n", i->start, i->end);
+      printf("M: %i %i\n", max(i->start,minBound), min(i->end, maxBound)-1);//print as one based, both inclusive
   }
 
 }
 
 void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
-
   if(seg->P.e - seg->P.s < min_reads_in_region
   || seg->N.e - seg->N.s < min_reads_in_region)
     return;
+
+  //printSeg(seg);
 
   int32_t regionLen = *(seg->N.e-1) - *(seg->P.s);
   if(regionLen < min_l_region)
@@ -119,10 +123,34 @@ void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
     slice->e++;
 }
 
-void prepareSeg(struct InputData* seg, struct InputData* data) {
+void prepareSeg(struct InputData* seg, struct InputData* data, int32_t minLoc, int32_t maxLoc) {
+  seg->bounds.start = minLoc;
+  seg->bounds.end = maxLoc + 1;
+  if(data->U.s) {
+    struct Interval* i = data->U.s;
+    while(i < data->U.e && i->end <= minLoc)
+      ++i;
+    seg->U.s = i;
+
+    if(seg->U.e < seg->U.s)
+      seg->U.e = seg->U.s;
+
+    i = seg->U.e;
+    while(i < data->U.e && i->start < maxLoc) // !!! incorrect, should be i->start <= maxLoc, but this way it is done in original pics 
+      ++i;
+    seg->U.e = i;
+  }
+
   //the segment boundaries are defined by minimal coord on positive strand and maximal coord on negative strand
-  int32_t minLoc = *seg->P.s;
-  int32_t maxLoc = *(seg->N.e-1);
+  maxLoc = *(seg->N.e-1);
+
+  if(seg->U.e > seg->U.s && seg->U.s->start > minLoc && seg->U.s->start < *seg->P.s) {
+    // !!! this is for compatibility with original pics only
+    // !!! very odd part, in the original pics this part even can segfault
+    minLoc = seg->U.s->start;
+  } else {
+    minLoc = *seg->P.s;
+  }
 
   int32_t* a = seg->P.s;
   while(a < data->P.e && *a <= maxLoc)
@@ -137,21 +165,6 @@ void prepareSeg(struct InputData* seg, struct InputData* data) {
   if(data->PC.s) {
     moveSliceInt32(&data->PC, &seg->PC, minLoc, maxLoc);
     moveSliceInt32(&data->NC, &seg->NC, minLoc, maxLoc);
-  }
-
-  if(data->U.s) {
-    struct Interval* i = data->U.s;
-    while(i < data->U.e && i->end <= minLoc)
-      ++i;
-    seg->U.s = i;
-
-    if(seg->U.e < seg->U.s)
-      seg->U.e = seg->U.s;
-
-    i = seg->U.e;
-    while(i < data->U.e && i->start <= maxLoc)
-      ++i;
-    seg->U.e = i;
   }
 }
 
@@ -182,6 +195,7 @@ void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_re
   struct SliceInt32 sP, sN;
   sP.s = sP.e = data->P.s;
   sN.s = sN.e = data->N.s;
+  int32_t segXStart = -1;
   int32_t segXEnd = -1;
   int32_t x;
   for(x = min(P[0],N[0]); x <= max(P[nP-1], N[nN-1]); x += step) {
@@ -192,12 +206,14 @@ void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_re
     int32_t nNegR = sN.e - sN.s;
 
     if(nPosL >= min_reads && nNegR >= min_reads) {
-      if(segXEnd == -1) {
+      if(segXEnd == -1) { //no previous segment, start the first segment
         seg.P.s = sP.s;
-      } else if(x - segXEnd > 2*width) {
-        prepareSeg(&seg, data);
+        segXStart = x;
+      } else if(x - segXEnd > 2*width) {//prev segment too far from current, report prev segment and start new one
+        prepareSeg(&seg, data, segXStart - width, segXEnd + width);
         processSeg(&seg, data, exp_read_count, ctrl_read_count);
         seg.P.s = sP.s;
+        segXStart = x;
       }
       segXEnd = x;
       seg.N.e = sN.e;
@@ -205,7 +221,7 @@ void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_re
 
   }
   if(segXEnd != -1) {//Last segment
-     prepareSeg(&seg, data);
+     prepareSeg(&seg, data, segXStart - width, segXEnd + width);
      processSeg(&seg, data, exp_read_count, ctrl_read_count);
   }
 }

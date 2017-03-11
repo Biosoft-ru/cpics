@@ -45,7 +45,10 @@ static int read_chr_bed(struct BedReader* reader, char* chr, struct SliceInterva
      res->e->end = reader->last->end; 
      res->e++;
       
-     int ret = fscanf(reader->file, "%31s %d %d", reader->lastChr, &(reader->last->start), &(reader->last->end));
+     int32_t start, end;
+     int ret = fscanf(reader->file, "%31s %d %d", reader->lastChr, &start, &end);
+     reader->last->start = start + 1;
+     reader->last->end = end + 1;
      if(ret != 3) {
        free(reader->last);
        free(reader->lastChr);
