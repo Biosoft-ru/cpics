@@ -1,2 +1,2 @@
-gcc -g -O2 -I /usr/local/include/ -L /usr/local/lib/ main.c -o cpics -lhts -lgsl -lblas -Wall -Wl,-rpath=/usr/local/lib
+gcc -std=gnu99 -g -O2 -I /usr/local/include/ -L /usr/local/lib/ main.c -o cpics -lhts -lgsl -lblas -Wall -Wl,-rpath=/usr/local/lib
 #gcc -static -g -O2 -I /usr/local/include/ -L /usr/local/lib/ main.c -o cpics -lhts -lgsl -lblas -lm -lpthread -lz -Wall -pg

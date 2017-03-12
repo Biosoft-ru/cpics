@@ -137,77 +137,27 @@ static void initPara(struct MixtureComp* comps, int32_t nComp, struct InputData*
   }
 }
 
-static inline void probMatrixF1(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
-  double* chi, double* nF, double* sF) {
-  memset(nF, 0, sizeof(double) * nComp);
-  memset(sF, 0, sizeof(double) * nComp);
+#define FUNCTION_NAME prob_sum1_F
+#define MU(c) (c.mu - 0.5*c.delta)
+#define SIGMASQ(c) (c.sigmaSqF)
+#include "prob_sum1.c"
+#undef FUNCTION_NAME
+#define FUNCTION_NAME prob_sum2_F
+#include "prob_sum2.c"
+#undef FUNCTION_NAME
+#undef MU
+#undef SIGMASQ
 
-  int i,j;
-  double mu[nComp];
-  for(j = 0; j < nComp; j++)
-    mu[j] = comps[j].mu - 0.5*comps[j].delta;
-
-  for(i = 0; i < N; i++) {
-    double y = Y[i];
-    double rF[nComp];
-    double ruyF[nComp];
-    double rFSum = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigmaSq = comps[j].sigmaSqF;
-      double a = y-mu[j];
-      a = 4*sigmaSq + a*a;
-      a = 1./a;
-      double b = sigmaSq*a;
-      double rFj = comps[j].w*b*b*sqrt(a);
-      rFSum += rFj;
-      rF[j] = rFj;
-      ruyF[j] = 5*a*rFj;
-    }
-    rFSum = 1./rFSum;
-    for(j = 0; j < nComp; j++) {
-      chi[j] += rF[j]*rFSum;
-      double ruyFj = ruyF[j]*rFSum;
-      nF[j] += ruyFj;
-      sF[j] += y * ruyFj;
-    }
-  }
-}
-
-static inline void probMatrixR1(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
-  double* chi, double* nR, double* sR) {
-  memset(nR, 0, sizeof(double) * nComp);
-  memset(sR, 0, sizeof(double) * nComp);
-
-  int i,j;
-  double mu[nComp];
-  for(j = 0; j < nComp; j++)
-    mu[j] = comps[j].mu + 0.5*comps[j].delta;
-
-  for(i = 0; i < N; i++) {
-    double y = Y[i];
-    double rR[nComp];
-    double ruyR[nComp];
-    double rRSum = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigmaSq = comps[j].sigmaSqR;
-      double a = y-mu[j];
-      a = 4*sigmaSq + a*a;
-      a = 1./a;
-      double b = sigmaSq*a;
-      double rRj = comps[j].w*b*b*sqrt(a);
-      rRSum += rRj;
-      rR[j] = rRj;
-      ruyR[j] = 5*a*rRj;
-    }
-    rRSum = 1./rRSum;
-    for(j = 0; j < nComp; j++) {
-      chi[j] += rR[j]*rRSum;
-      double ruyRj = ruyR[j]*rRSum;
-      nR[j] += ruyRj;
-      sR[j] += y * ruyRj;
-    }
-  }
-}
+#define FUNCTION_NAME prob_sum1_R
+#define MU(c) (c.mu + 0.5*c.delta)
+#define SIGMASQ(c) (c.sigmaSqR)
+#include "prob_sum1.c"
+#undef FUNCTION_NAME
+#define FUNCTION_NAME prob_sum2_R
+#include "prob_sum2.c"
+#undef FUNCTION_NAME
+#undef MU
+#undef SIGMASQ
 
 static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   int32_t NF = seg->P.e - seg->P.s;
@@ -217,14 +167,16 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   memset(chi, 0, sizeof chi);
 
   double nF[nComp], sF[nComp];
-  probMatrixF1(comps, nComp, seg->P.s, NF, chi, nF, sF);
+  double phiF;
+  prob_sum1_F(comps, nComp, seg->P.s, NF, chi, nF, sF, &phiF);
 
   double nR[nComp], sR[nComp];
-  probMatrixR1(comps, nComp, seg->N.s, NR, chi, nR, sR);
+  double phiR;
+  prob_sum1_R(comps, nComp, seg->N.s, NR, chi, nR, sR, &phiR);
 
   int j;
   for(j = 0; j < nComp; j++)
-    comps[j].w = chi[j] / (NF + NR);
+    comps[j].w = chi[j] / (phiF+phiR);
 
   int32_t dim = 2*nComp;
   double AA[dim*dim];
@@ -261,85 +213,17 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
     }
 }
 
-static inline void probMatrixF2(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
-  double* chiF, double* etaF) {
-  memset(chiF, 0, sizeof(double) * nComp);
-  memset(etaF, 0, sizeof(double) * nComp);
-
-  int i,j;
-  double mu[nComp];
-  for(j = 0; j < nComp; j++)
-    mu[j] = comps[j].mu - 0.5*comps[j].delta;
-
-  for(i = 0; i < N; i++) {
-    double y = Y[i];
-    double rF[nComp];
-    double ruyF[nComp];
-    double rFSum = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigmaSq = comps[j].sigmaSqF;
-      double d = y - mu[j];
-      d = d*d;
-      double a = 1./(4*sigmaSq + d);
-      double b = sigmaSq*a;
-      double rFj = comps[j].w*b*b*sqrt(a);
-      rFSum += rFj;
-      rF[j] = rFj;
-      ruyF[j] = 5*b*d*rFj;
-    }
-    rFSum = 1./rFSum;
-    for(j = 0; j < nComp; j++) {
-      chiF[j] += rF[j]*rFSum;
-      etaF[j] += ruyF[j]*rFSum;
-    }
-  }
-}
-
-static inline void probMatrixR2(struct MixtureComp* comps, int32_t nComp, int32_t* Y, int32_t N,
-  double* chiR, double* etaR) {
-  memset(chiR, 0, sizeof(double) * nComp);
-  memset(etaR, 0, sizeof(double) * nComp);
-
-  int i,j;
-  double mu[nComp];
-  for(j = 0; j < nComp; j++)
-    mu[j] = comps[j].mu + 0.5*comps[j].delta;
-
-  for(i = 0; i < N; i++) {
-    double y = Y[i];
-    double rR[nComp];
-    double ruyR[nComp];
-    double rRSum = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigmaSq = comps[j].sigmaSqR;
-      double d = y - mu[j];
-      d = d*d;
-      double a = 1./(4*sigmaSq + d);
-      double b = sigmaSq*a;
-      double rRj = comps[j].w*b*b*sqrt(a);
-      rRSum += rRj;
-      rR[j] = rRj;
-      ruyR[j] = 5*b*d*rRj;
-    }
-    rRSum = 1./rRSum;
-    for(j = 0; j < nComp; j++) {
-      chiR[j] += rR[j]*rRSum;
-      etaR[j] += ruyR[j]*rRSum;
-    }
-  }
-}
-
 static void ECM2(struct MixtureComp* comps, int nComp, struct InputData* seg) {
   int32_t NF = seg->P.e - seg->P.s;
   int32_t NR = seg->N.e - seg->N.s;
 
   double chiF[nComp];
   double etaF[nComp];
-  probMatrixF2(comps, nComp, seg->P.s, NF, chiF, etaF);
+  prob_sum2_F(comps, nComp, seg->P.s, NF, chiF, etaF);
 
   double chiR[nComp];
   double etaR[nComp];
-  probMatrixR2(comps, nComp, seg->N.s, NR, chiR, etaR);
+  prob_sum2_R(comps, nComp, seg->N.s, NR, chiR, etaR);
 
 
   double cc = 2*PriorParams.alpha - 1;
