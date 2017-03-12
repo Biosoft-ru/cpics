@@ -96,8 +96,11 @@ void compute_fdr() {
 
   double score_cutoff = compute_score_cutoff(exp_scores, exp_count, ctrl_scores, ctrl_count);
 
+  free(exp_scores);
+  free(ctrl_scores);
+
   rewind(cpics_exp_out_file);
-  char* line;
+  char* line = 0;
   size_t line_len;
   while(getline(&line, &line_len, cpics_exp_out_file) != -1) {
     double score;
@@ -111,6 +114,7 @@ void compute_fdr() {
         exit(1);
       }
   }
+  free(line);
 
   close_tmp_files();
   remove_tmp_files();

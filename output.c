@@ -63,14 +63,16 @@ static char *cpics_exp_out_file_name, *cpics_ctrl_out_file_name;
 static FILE *cpics_exp_out_file, *cpics_ctrl_out_file;
 
 void open_tmp_files(const char* mode) {
-  cpics_exp_out_file_name = make_tmp_file_name(".exp");
+  if(!cpics_exp_out_file_name)
+    cpics_exp_out_file_name = make_tmp_file_name(".exp");
   cpics_exp_out_file = fopen(cpics_exp_out_file_name, mode);
   if(!cpics_exp_out_file) {
     perror(cpics_exp_out_file_name);
     exit(1);
   }
 
-  cpics_ctrl_out_file_name = make_tmp_file_name(".ctrl");
+  if(!cpics_ctrl_out_file_name)
+    cpics_ctrl_out_file_name = make_tmp_file_name(".ctrl");
   cpics_ctrl_out_file = fopen(cpics_ctrl_out_file_name, mode);
   if(!cpics_ctrl_out_file) {
     perror(cpics_ctrl_out_file_name);
