@@ -10,18 +10,15 @@ static inline double tdist4(double x) {
   return TDIST4_F/a;
 }
 
+//Built in parameters, can not be changed by user.
 static struct EMParams {
   int32_t maxK;//Maximal number of mixture components
   double tol;
   int B;//Maximum number of EM iterations
-  int mergePeaks;
-  int mapCorrect;
 } EMParams = {
   .maxK = 15,
   .tol=1e-4,
   .B=100,
-  .mergePeaks=1,
-  .mapCorrect=1
 };
 
 static struct PriorParams {
@@ -29,20 +26,16 @@ static struct PriorParams {
   double rho;
   double alpha;
   double beta;
-  double dMu;//for histones
-  int PExi;
 } PriorParams = {
   .xi = 200,
   .rho = 1,
   .alpha = 20,
   .beta = 40000,
-  .dMu = 0,
-  .PExi = 0
 };
 
-//??? distinct from similar parameters in segmentation procedure
+//PICS needs at least 3 reads on each strand per mixture component.
+//This is distinct from similar parameter in segmentation procedure.
 static int minReadsPerPeak = 3;
-static int minReadsPerRegion = 4;
 
 struct MixtureComp {
   double w, mu, delta, sigmaSqF, sigmaSqR, se, seF, seR, score;

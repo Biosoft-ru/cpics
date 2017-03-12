@@ -26,8 +26,6 @@ void read_score_from_bed_file(FILE* f, const char* f_name, double** scoreP, int3
   *nP = size;
 }
 
-static const double fdr_cutoff = 0.001;
-
 //Calculates FDR as in original PICS, but more efficient
 double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl, int32_t ctrl_count) {
   if(ctrl_count == 0 || exp_count == 0)

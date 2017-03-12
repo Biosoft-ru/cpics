@@ -4,8 +4,10 @@ static int width = 250;
 static int min_reads = 2;
 static int min_reads_in_region = 3;
 static int min_l_region = 100;
+static const double fdr_cutoff = 0.001;
 static char *exp_bam_file_name = 0, *ctrl_bam_file_name = 0, *unmappable_file_name = 0;
 static const char* cpics_out_file_name = 0;
+
 
 static void usage() {
   fprintf(stderr, "Usage: cpics [-u <unmappable bed file>] [-c <control bam file>] <bam file> <out file>\n" );
