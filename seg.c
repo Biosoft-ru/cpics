@@ -27,11 +27,11 @@ static int32_t getSegmentLen(struct InputData* seg) {
 }
 
 static void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
-  if(seg->P.e - seg->P.s < min_reads_in_region
-  || seg->N.e - seg->N.s < min_reads_in_region)
+  if(seg->P.e - seg->P.s < Opt.min_reads_in_region
+  || seg->N.e - seg->N.s < Opt.min_reads_in_region)
     return;
 
-  if(getSegmentLen(seg) < min_l_region)
+  if(getSegmentLen(seg) < Opt.min_l_region)
     return;
 
   struct MixtureResult* mix = fitPICS(seg);
@@ -133,19 +133,19 @@ static void process_chr(struct InputData* data, int32_t exp_read_count, int32_t 
   int32_t segXStart = -1;
   int32_t segXEnd = -1;
   int32_t x;
-  for(x = min(P[0],N[0]); x <= max(P[nP-1], N[nN-1]); x += step) {
-    moveSliceInt32(&data->P, &sP, x-width, x);
+  for(x = min(P[0],N[0]); x <= max(P[nP-1], N[nN-1]); x += Opt.step) {
+    moveSliceInt32(&data->P, &sP, x-Opt.width, x);
     int32_t nPosL = sP.e - sP.s;
 
-    moveSliceInt32(&data->N, &sN, x, x+width);
+    moveSliceInt32(&data->N, &sN, x, x+Opt.width);
     int32_t nNegR = sN.e - sN.s;
 
-    if(nPosL >= min_reads && nNegR >= min_reads) {
+    if(nPosL >= Opt.min_reads_in_window && nNegR >= Opt.min_reads_in_window) {
       if(segXEnd == -1) { //no previous segment, start the first segment
         seg.P.s = sP.s;
         segXStart = x;
-      } else if(x - segXEnd > 2*width) {//prev segment too far from current, report prev segment and start new one
-        prepareSeg(&seg, data, segXStart - width, segXEnd + width);
+      } else if(x - segXEnd > 2*Opt.width) {//prev segment too far from current, report prev segment and start new one
+        prepareSeg(&seg, data, segXStart - Opt.width, segXEnd + Opt.width);
         processSeg(&seg, data, exp_read_count, ctrl_read_count);
         seg.P.s = sP.s;
         segXStart = x;
@@ -156,7 +156,7 @@ static void process_chr(struct InputData* data, int32_t exp_read_count, int32_t 
 
   }
   if(segXEnd != -1) {//Last segment
-     prepareSeg(&seg, data, segXStart - width, segXEnd + width);
+     prepareSeg(&seg, data, segXStart - Opt.width, segXEnd + Opt.width);
      processSeg(&seg, data, exp_read_count, ctrl_read_count);
   }
 }

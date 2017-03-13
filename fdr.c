@@ -60,7 +60,7 @@ static double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl,
     if(fdr > prev_fdr)
       fdr = prev_fdr;
 
-    if(fdr <= fdr_cutoff)
+    if(fdr <= Opt.fdr_cutoff)
       return x;
 
     double next_score = x;
@@ -108,7 +108,7 @@ static void compute_fdr() {
     }
     if(score >= score_cutoff)
       if(fputs(line, cpics_out_file) == EOF) {
-        fprintf(stderr, "Can not write to file: %s\n", cpics_out_file_name);
+        fprintf(stderr, "Can not write to file: %s\n", Opt.cpics_out_file_name);
         exit(1);
       }
   }

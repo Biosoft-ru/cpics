@@ -10,17 +10,17 @@ static void cpics_output_to_file(FILE* f, const char* name) {
 }
 
 static void open_out_file() {
-  cpics_out_file = fopen(cpics_out_file_name, "w");
+  cpics_out_file = fopen(Opt.cpics_out_file_name, "w");
   if(!cpics_out_file) {
-    perror(cpics_out_file_name);
+    perror(Opt.cpics_out_file_name);
     exit(1);
   }
-  cpics_output_to_file(cpics_out_file, cpics_out_file_name);
+  cpics_output_to_file(cpics_out_file, Opt.cpics_out_file_name);
 }
 
 static void close_out_file() {
   if(fclose(cpics_out_file) != 0) {
-    perror(cpics_out_file_name);
+    perror(Opt.cpics_out_file_name);
     exit(1);
   }
 }
@@ -33,7 +33,7 @@ static void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
   int i;
   for(i = 0;i < nComp; i++) {
     struct MixtureComp c = comps[i];
-    if(!score_filter_disabled && c.score <= 10) continue;
+    if(!score_filter_disabled && c.score <= Opt.score_cutoff) continue;
     if(c.delta <= 50 || c.delta >= 300) continue;
     if(c.se >= 50 || c.se <= 0) continue; //!!! ==0 ???
     if(c.sigmaSqF > 22500 || c.sigmaSqR > 22500) continue;
@@ -47,14 +47,14 @@ static void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
 }
 
 static char* make_tmp_file_name(const char* suffix) {
-  size_t l1 = strlen(cpics_out_file_name);
+  size_t l1 = strlen(Opt.cpics_out_file_name);
   size_t l2 = strlen(suffix);
   char* res = malloc( l1 + l2 + 1 );
   if(!res) {
     perror("in make_tmp_file_name");
     exit(1);
   }
-  memcpy(res, cpics_out_file_name, l1);
+  memcpy(res, Opt.cpics_out_file_name, l1);
   memcpy(res + l1, suffix, l2 + 1);
   return res;
 }
