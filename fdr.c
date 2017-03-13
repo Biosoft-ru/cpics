@@ -1,4 +1,4 @@
-void read_score_from_bed_file(FILE* f, const char* f_name, double** scoreP, int32_t* nP) {
+static void read_score_from_bed_file(FILE* f, const char* f_name, double** scoreP, int32_t* nP) {
   size_t capacity = 1024;
   size_t size = 0;
   double* scores = malloc(sizeof(double)*capacity);
@@ -27,7 +27,7 @@ void read_score_from_bed_file(FILE* f, const char* f_name, double** scoreP, int3
 }
 
 //Calculates FDR as in original PICS, but more efficient
-double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl, int32_t ctrl_count) {
+static double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl, int32_t ctrl_count) {
   if(ctrl_count == 0 || exp_count == 0)
     return -INFINITY;
 
@@ -80,7 +80,7 @@ double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl, int32_
   return -1;
 }
 
-void compute_fdr() {
+static void compute_fdr() {
   open_tmp_files("r");
 
   double* exp_scores;

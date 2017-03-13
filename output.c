@@ -29,7 +29,7 @@ static int score_filter_disabled = 0;
 static void cpics_disable_score_filter() { score_filter_disabled = 1; }
 
 
-void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
+static void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
   int i;
   for(i = 0;i < nComp; i++) {
     struct MixtureComp c = comps[i];
@@ -46,7 +46,7 @@ void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
   }
 }
 
-char* make_tmp_file_name(const char* suffix) {
+static char* make_tmp_file_name(const char* suffix) {
   size_t l1 = strlen(cpics_out_file_name);
   size_t l2 = strlen(suffix);
   char* res = malloc( l1 + l2 + 1 );
@@ -62,7 +62,7 @@ char* make_tmp_file_name(const char* suffix) {
 static char *cpics_exp_out_file_name, *cpics_ctrl_out_file_name;
 static FILE *cpics_exp_out_file, *cpics_ctrl_out_file;
 
-void open_tmp_files(const char* mode) {
+static void open_tmp_files(const char* mode) {
   if(!cpics_exp_out_file_name)
     cpics_exp_out_file_name = make_tmp_file_name(".exp");
   cpics_exp_out_file = fopen(cpics_exp_out_file_name, mode);
@@ -80,7 +80,7 @@ void open_tmp_files(const char* mode) {
   }
 }
 
-void close_tmp_files() {
+static void close_tmp_files() {
   if(fclose(cpics_exp_out_file) != 0) {
     perror(cpics_exp_out_file_name);
     exit(1);
@@ -91,7 +91,7 @@ void close_tmp_files() {
   }
 }
 
-void remove_tmp_files() {
+static void remove_tmp_files() {
   if(remove(cpics_exp_out_file_name) != 0) {
     perror(cpics_exp_out_file_name);
     exit(1);

@@ -62,15 +62,6 @@ static int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t n
     for(c=0;c<=r;c++)
       infMat[r*dim+c] -= scoreObsBarF[r]*scoreObsBarF[c]/NF;
 
-/*
-  printf("infMatF:\n");
-  for(r=0;r<dim;r++) {
-    for(c=0;c<=r;c++)
-      printf(" %.4f", infMat[r*dim+c]);
-    printf("\n");
-  }
-*/
-
   double scoreObsBarR[dim];
   memset(scoreObsBarR, 0, sizeof(double)*dim);
 
@@ -108,7 +99,7 @@ static int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t n
     for(j=0;j<nComp;j++)
     {
       scoreObsR[nComp-1+j] = qMuoR[j];
-      scoreObsR[2*nComp-1+j] = qMuoR[j]/2.;//!!! sign
+      scoreObsR[2*nComp-1+j] = qMuoR[j]/2.;
       scoreObsR[4*nComp-1+j] = qSigmaoR[j];
     }
 

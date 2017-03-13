@@ -48,7 +48,6 @@ static inline void FUNCTION_NAME (
       int32_t b = min(u->end, bounds->end) - 1;
       double aNorm = (a - MU(comps[j])) / sigma;
       double bNorm = (b - MU(comps[j])) / sigma;
-//      printf("X: %i %i %.17g %.17g\n", a, b, aNorm, bNorm);
       
       double cdfDiff = gsl_cdf_tdist_P(bNorm, 4) - gsl_cdf_tdist_P(aNorm, 4);
       H3[j] += cdfDiff;
@@ -64,15 +63,10 @@ static inline void FUNCTION_NAME (
   }
   *phi = nY / P0;
   
-//  printf("s:");
   for(int32_t j = 0; j < nComp; j++) {
     double phiW = (*phi)*comps[j].w;
     chi[j] += phiW * H3[j]; 
-//    printf(" %.17g", H0[j]);
-//    printf(" %.17g", H1[j]);
     s[j] += phiW * (MU(comps[j])*H0[j] + 2*sqrt(SIGMASQ(comps[j]))*H1[j]) / SIGMASQ(comps[j]);
     n[j] += phiW * H0[j] / SIGMASQ(comps[j]);
-//    printf(" %.17g", s[j]);
   }
-//  printf("\n");
 }

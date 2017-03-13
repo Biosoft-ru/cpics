@@ -1,46 +1,11 @@
-
-struct SliceInt32 {
-  int32_t *s, *e;// array of int32_t [s,e)
-};
-
-struct Interval {
-  int32_t start, end; // [start,end) one based
-};
-struct SliceInterval {
-  struct Interval *s, *e;// array of struct Interval [s,e)
-};
-
-struct InputData {
-  char* chr;
-
-  struct SliceInt32 P;//positive
-  struct SliceInt32 N;//negative
-
-  struct SliceInt32 PC;//positive control
-  struct SliceInt32 NC;//negative control
-
-  struct SliceInterval U;//intervals for unmappable regions
-  struct Interval bounds;//window bounds during segmentation
-};
-
+#include "types.c"
 #include "pics.c"
 #include "infmat.c"
 #include "merge.c"
 #include "score.c"
 #include "output.c"
 
-void free_input_data(struct InputData* data) {
-  free(data->P.s);
-  free(data->N.s);
-  if(data->PC.s) {
-    free(data->PC.s);
-    free(data->NC.s);
-  }
-  if(data->U.s)
-    free(data->U.s);
-}
-
-void swap_exp_ctrl(struct InputData* data) {
+static void swap_exp_ctrl(struct InputData* data) {
   struct SliceInt32 tmp;
 
   tmp = data->P;
@@ -52,43 +17,7 @@ void swap_exp_ctrl(struct InputData* data) {
   data->NC = tmp;
 }
 
-void printSeg(struct InputData* seg) {
-  int32_t* a;
-  printf("%s\n", seg->chr);
-
-  printf("F:");
-  for(a = seg->P.s; a < seg->P.e; a++)
-    printf(" %i", *a);
-  printf("\n");
-
-  printf("R:");
-  for(a = seg->N.s; a < seg->N.e; a++)
-    printf(" %i", *a);
-  printf("\n");
-
-  if(seg->PC.s) {
-    printf("CF:");
-    for(a = seg->PC.s; a < seg->PC.e; a++)
-      printf(" %i", *a);
-    printf("\n");
-    
-    printf("CR:");
-    for(a = seg->NC.s; a < seg->NC.e; a++)
-      printf(" %i", *a);
-    printf("\n");
-  }
-
-  if(seg->U.s) {
-    int32_t minBound = seg->bounds.start;
-    int32_t maxBound = seg->bounds.end;
-    struct Interval* i;
-    for(i = seg->U.s; i < seg->U.e; i++)
-      printf("M: %i %i\n", max(i->start,minBound), min(i->end, maxBound)-1);//print as one based, both inclusive
-  }
-
-}
-
-int32_t getSegmentLen(struct InputData* seg) {
+static int32_t getSegmentLen(struct InputData* seg) {
   if(seg->U.s == seg->U.e)
     return *(seg->N.e-1) - *(seg->P.s);
   // !!! This is odd, segment length depends on the existence of unmappable regions.
@@ -97,12 +26,10 @@ int32_t getSegmentLen(struct InputData* seg) {
   return end - start;
 }
 
-void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
+static void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
   if(seg->P.e - seg->P.s < min_reads_in_region
   || seg->N.e - seg->N.s < min_reads_in_region)
     return;
-
-  //printSeg(seg);
 
   if(getSegmentLen(seg) < min_l_region)
     return;
@@ -121,7 +48,7 @@ void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_
   }
 }
 
-void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
+static void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
    int32_t minLoc, int32_t maxLoc) {
   while(slice->s < parent->e && *(slice->s) < minLoc)
     slice->s++;
@@ -131,7 +58,7 @@ void moveSliceInt32(struct SliceInt32* parent, struct SliceInt32* slice,
     slice->e++;
 }
 
-void prepareSeg(struct InputData* seg, struct InputData* data, int32_t minLoc, int32_t maxLoc) {
+static void prepareSeg(struct InputData* seg, struct InputData* data, int32_t minLoc, int32_t maxLoc) {
   seg->bounds.start = minLoc;
   seg->bounds.end = maxLoc + 1;
   if(data->U.s) {
@@ -176,7 +103,7 @@ void prepareSeg(struct InputData* seg, struct InputData* data, int32_t minLoc, i
   }
 }
 
-void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
+static void process_chr(struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
   int32_t* P = data->P.s;
   int32_t nP = data->P.e - data->P.s;
   int32_t* N = data->N.s;

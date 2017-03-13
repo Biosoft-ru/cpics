@@ -1,3 +1,4 @@
+#include "types.c"
 
 #include <gsl/gsl_sf_gamma.h>
 static double TDIST4_F;
@@ -55,79 +56,6 @@ static struct PriorParams {
 //PICS needs at least 3 reads on each strand per mixture component.
 //This is distinct from similar parameter in segmentation procedure.
 static int minReadsPerPeak = 3;
-
-struct MixtureComp {
-  double w, mu, delta, sigmaSqF, sigmaSqR, se, seF, seR, score;
-};
-
-struct MixtureResult {
-  double BIC;
-  int converge;
-  int32_t nComp;
-  struct MixtureComp* comps;
-};
-
-void printComponents(struct MixtureComp* comps, int32_t nComp) {
-  int i;
-  printf("w:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].w);
-  printf("\n");
-  printf("mu:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].mu);
-  printf("\n");
-  printf("delta:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].delta);
-  printf("\n");
-  printf("sigmaSqF:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].sigmaSqF);
-  printf("\n");
-  printf("sigmaSqR:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].sigmaSqR);
-  printf("\n");
-  printf("se:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].se);
-  printf("\n");
-  printf("seF:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].seF);
-  printf("\n");
-  printf("seR:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].seR);
-  printf("\n");
-  printf("score:");
-  for(i = 0; i < nComp; i++)
-    printf(" %.4f", comps[i].score);
-  printf("\n");
-}
-
-static struct MixtureResult* newMixtureResult(int32_t nComp) {
-  struct MixtureResult* res = malloc(sizeof(struct MixtureResult));
-  res->comps = malloc(sizeof(struct MixtureComp)*nComp);
-  res->nComp = nComp;
-  return res;
-}
-
-static void freeMixtureResult(struct MixtureResult* mr) {
-  free(mr->comps);
-  free(mr);
-}
-
-static struct MixtureResult* copyMixtureResult(struct MixtureResult* mr) {
-  struct MixtureResult* copy = newMixtureResult(mr->nComp);
-  copy->BIC = mr->BIC;
-  copy->converge = mr->converge;
-  int32_t i;
-  for(i = 0; i < mr->nComp; i++)
-     copy->comps[i] = mr->comps[i];
-  return copy;
-}
 
 static void initPara(struct MixtureComp* comps, int32_t nComp, struct InputData* seg) {
   int32_t NF = seg->P.e - seg->P.s;

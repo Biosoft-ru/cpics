@@ -25,7 +25,7 @@ static void close_bam_reader(struct BamReader* reader) {
   free(reader->file_name);
 }
 
-int32_t count_mapped_reads(struct BamReader* reader) {
+static int32_t count_mapped_reads(struct BamReader* reader) {
   hts_idx_t* idx = sam_index_load(reader->file, reader->file_name);
   int nChr = reader->header->n_targets;
   int32_t total_mapped = 0;

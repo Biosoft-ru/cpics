@@ -1,4 +1,4 @@
-void computeScores(struct MixtureComp* comps, int32_t nComp, struct InputData* seg, int32_t N, int32_t Nc) {
+static void computeScores(struct MixtureComp* comps, int32_t nComp, struct InputData* seg, int32_t N, int32_t Nc) {
 
   const double calpha=1.5;//percentile cutoff
 

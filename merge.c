@@ -1,4 +1,4 @@
-int mergePeaks(struct MixtureComp* comps, int32_t* nComp, double* infMat)
+static int mergePeaks(struct MixtureComp* comps, int32_t* nComp, double* infMat)
 {
   const int nSe = 3;
 
@@ -76,18 +76,6 @@ int mergePeaks(struct MixtureComp* comps, int32_t* nComp, double* infMat)
         C[K0-1+i] = origW[i]/SumW;
         C[K0-1+K0+i] = origW[i]/SumW/2.;
       }
-
-   //printf("A:\n");
-   //for(i=0;i<dim;i++)
-   //  printf(" %.4f", A[i]);
-   //printf("\n");
-
-   //printf("infMat:\n");
-   //for(i=0;i<dim;i++) {
-   //  for(j=0;j<dim;j++)
-   //    printf(" %.4f", infMat[i*dim+j]);
-   //  printf("\n");
-   //}
 
     int flag = gsl_blas_dtrmv(CblasUpper, CblasNoTrans, CblasNonUnit, &gslInfMat.matrix, &gslA.vector);
     if(flag!=0)
