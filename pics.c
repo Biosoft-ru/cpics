@@ -1,13 +1,32 @@
 
 #include <gsl/gsl_sf_gamma.h>
 static double TDIST4_F;
+static double cst;
+
 static void init_tdist4() {
   TDIST4_F = gsl_sf_gamma(2.5)/gsl_sf_gamma(2)/sqrt(4*M_PI);
+  cst = gsl_sf_gamma(3.5)/gsl_sf_gamma(3.0)/M_SQRTPI;
 }
 static inline double tdist4(double x) {
   double a = (1+0.25*x*x);
   a=a*a*sqrt(a);
   return TDIST4_F/a;
+}
+
+
+static double fun0(double x)
+{
+  return pow(x,5)/5-pow(x,3)*2/3+x;
+}
+
+static double fun1(double x, int nu)
+{
+  return pow(1+x*x/4, -2.5);
+}
+
+static double fun2(double x)
+{
+  return pow(x,3)/3-pow(x,5)/5;
 }
 
 //Built in parameters, can not be changed by user.
@@ -131,8 +150,8 @@ static void initPara(struct MixtureComp* comps, int32_t nComp, struct InputData*
 }
 
 #define FUNCTION_NAME prob_sum1_F
-#define MU(c) (c.mu - 0.5*c.delta)
-#define SIGMASQ(c) (c.sigmaSqF)
+#define MU(c) ((c).mu - 0.5*(c).delta)
+#define SIGMASQ(c) ((c).sigmaSqF)
 #include "prob_sum1.c"
 #undef FUNCTION_NAME
 #define FUNCTION_NAME prob_sum2_F
@@ -142,8 +161,8 @@ static void initPara(struct MixtureComp* comps, int32_t nComp, struct InputData*
 #undef SIGMASQ
 
 #define FUNCTION_NAME prob_sum1_R
-#define MU(c) (c.mu + 0.5*c.delta)
-#define SIGMASQ(c) (c.sigmaSqR)
+#define MU(c) ((c).mu + 0.5*(c).delta)
+#define SIGMASQ(c) ((c).sigmaSqR)
 #include "prob_sum1.c"
 #undef FUNCTION_NAME
 #define FUNCTION_NAME prob_sum2_R
@@ -161,11 +180,11 @@ static void ECM1(struct MixtureComp* comps, int nComp, struct InputData* seg) {
 
   double nF[nComp], sF[nComp];
   double phiF;
-  prob_sum1_F(comps, nComp, seg->P.s, NF, chi, nF, sF, &phiF);
+  prob_sum1_F(comps, nComp, seg->P.s, NF, &seg->U, &seg->bounds, chi, nF, sF, &phiF);
 
   double nR[nComp], sR[nComp];
   double phiR;
-  prob_sum1_R(comps, nComp, seg->N.s, NR, chi, nR, sR, &phiR);
+  prob_sum1_R(comps, nComp, seg->N.s, NR, &seg->U, &seg->bounds, chi, nR, sR, &phiR);
 
   int j;
   for(j = 0; j < nComp; j++)
@@ -212,11 +231,11 @@ static void ECM2(struct MixtureComp* comps, int nComp, struct InputData* seg) {
 
   double chiF[nComp];
   double etaF[nComp];
-  prob_sum2_F(comps, nComp, seg->P.s, NF, chiF, etaF);
+  prob_sum2_F(comps, nComp, seg->P.s, NF, &seg->U, &seg->bounds, chiF, etaF);
 
   double chiR[nComp];
   double etaR[nComp];
-  prob_sum2_R(comps, nComp, seg->N.s, NR, chiR, etaR);
+  prob_sum2_R(comps, nComp, seg->N.s, NR, &seg->U, &seg->bounds, chiR, etaR);
 
 
   double cc = 2*PriorParams.alpha - 1;
@@ -264,36 +283,7 @@ static int32_t iterEM(struct MixtureComp* comps, int nComp, struct InputData* se
   return iter;
 }
 
-static double BIC(struct MixtureComp* comps, int nComp, struct InputData* seg) {
-  int32_t NF = seg->P.e - seg->P.s;
-  int32_t NR = seg->N.e - seg->N.s;
-  int32_t N = NF + NR;
-
-  double bic = (1 - 5*nComp)*log(N)/2.0;
-  int32_t i,j;
-  for(i = 0; i < NF; i++) {
-    double p = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigma = sqrt(comps[j].sigmaSqF);
-      double mu = comps[j].mu - comps[j].delta/2;
-      double yNorm = (seg->P.s[i] - mu)/sigma;
-      p += comps[j].w * tdist4(yNorm)/sigma;
-    }
-    bic += log(p);
-  }
-  for(i = 0; i < NR; i++) {
-    double p = 0;
-    for(j = 0; j < nComp; j++) {
-      double sigma = sqrt(comps[j].sigmaSqR);
-      double mu = comps[j].mu + comps[j].delta/2;
-      double yNorm = (seg->N.s[i] - mu)/sigma;
-      p += comps[j].w * tdist4(yNorm)/sigma;
-    }
-    bic += log(p);
-  }
-
-  return bic;
-}
+#include "bic.c"
 
 static int fitModel(int nComp, struct InputData* seg, struct MixtureResult* res) {
 

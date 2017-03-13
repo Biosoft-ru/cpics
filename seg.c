@@ -88,6 +88,15 @@ void printSeg(struct InputData* seg) {
 
 }
 
+int32_t getSegmentLen(struct InputData* seg) {
+  if(seg->U.s == seg->U.e)
+    return *(seg->N.e-1) - *(seg->P.s);
+  // !!! This is odd, segment length depends on the existence of unmappable regions.
+  int32_t start = max(seg->bounds.start, min(seg->P.s[0], seg->U.s->start));
+  int32_t end = min(seg->bounds.end,max(*(seg->N.e-1), (seg->U.e-1)->end));
+  return end - start;
+}
+
 void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
   if(seg->P.e - seg->P.s < min_reads_in_region
   || seg->N.e - seg->N.s < min_reads_in_region)
@@ -95,8 +104,7 @@ void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_
 
   //printSeg(seg);
 
-  int32_t regionLen = *(seg->N.e-1) - *(seg->P.s);
-  if(regionLen < min_l_region)
+  if(getSegmentLen(seg) < min_l_region)
     return;
 
   struct MixtureResult* mix = fitPICS(seg);

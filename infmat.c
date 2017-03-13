@@ -1,5 +1,6 @@
+#include "infmat_miss.c"
 
-int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t nComp, double* infMat)
+static int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t nComp, double* infMat)
 {
   int32_t NF = seg->P.e - seg->P.s;
   int32_t NR = seg->N.e - seg->N.s;
@@ -152,6 +153,11 @@ int getInfMat(struct InputData* seg, struct MixtureComp* comps, int32_t nComp, d
   for(r=0;r<dim;r++)
     for(c=0;c<dim;c++)
       infMat[r*dim+c] += infMatPri[r*dim+c];
+
+  if(seg->U.s != seg->U.e) {
+    addInfMatMissF(seg, comps, nComp, infMat);
+    addInfMatMissR(seg, comps, nComp, infMat);
+  }
   
   gsl_matrix_view gslInfMat = gsl_matrix_view_array(infMat, dim, dim);
   int flag = gsl_linalg_cholesky_decomp(&gslInfMat.matrix);
