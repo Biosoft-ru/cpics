@@ -59,6 +59,9 @@ static void addInfMatMissF(struct InputData* seg, struct MixtureComp* comps, int
       scoreMissBar[i] += PJ*scoreMiss[i]/J;
   }
 
+  if(P0 == 1)
+    return;
+
   for(int32_t i = 0; i < dim; i++)
     for(int32_t j = 0; j <= i; j++)
       infMatMiss[i*dim+j] /= P0;
@@ -133,6 +136,9 @@ static void addInfMatMissR(struct InputData* seg, struct MixtureComp* comps, int
     for(int32_t i = 0; i < dim; i++)
       scoreMissBar[i] += PJ*scoreMiss[i]/J;
   }
+
+  if(P0 == 1)
+    return;
 
   for(int32_t i = 0; i < dim; i++)
     for(int32_t j = 0; j <= i; j++)
