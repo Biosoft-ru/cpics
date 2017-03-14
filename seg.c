@@ -18,12 +18,7 @@ static void swap_exp_ctrl(struct InputData* data) {
 }
 
 static int32_t getSegmentLen(struct InputData* seg) {
-  if(seg->U.s == seg->U.e)
-    return *(seg->N.e-1) - *(seg->P.s);
-  // !!! This is odd, segment length depends on the existence of unmappable regions.
-  int32_t start = max(seg->bounds.start, min(seg->P.s[0], seg->U.s->start));
-  int32_t end = min(seg->bounds.end,max(*(seg->N.e-1), (seg->U.e-1)->end));
-  return end - start;
+  return *(seg->N.e-1) - *(seg->P.s);
 }
 
 static void processSeg(struct InputData* seg, struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
@@ -76,15 +71,8 @@ static void prepareSeg(struct InputData* seg, struct InputData* data, int32_t mi
   }
 
   //the segment boundaries are defined by minimal coord on positive strand and maximal coord on negative strand
+  minLoc = *seg->P.s;
   maxLoc = *(seg->N.e-1);
-
-  if(seg->U.e > seg->U.s && seg->U.s->start > minLoc && seg->U.s->start < *seg->P.s) {
-    // !!! this is for compatibility with original pics only
-    // !!! very odd part, in the original pics this part even can segfault
-    minLoc = seg->U.s->start;
-  } else {
-    minLoc = *seg->P.s;
-  }
 
   int32_t* a = seg->P.s;
   while(a < data->P.e && *a <= maxLoc)
