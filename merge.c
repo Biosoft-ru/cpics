@@ -96,7 +96,7 @@ static int mergePeaks(struct MixtureComp* comps, int32_t* nComp, double* infMat)
     for(i=(iMerge+1);i<K-1;i++)
     {
       comps[i] = comps[i+1];
-      for(j=0;j<K;j++)// !!! j<K0
+      for(j=0;j<K0;j++)
         I[i*K0+j] = I[(i+1)*K0+j];
     }
 

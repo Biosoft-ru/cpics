@@ -43,7 +43,7 @@ static void addInfMatMissF(struct InputData* seg, struct MixtureComp* comps, int
       double wP = c->w / PJ;
       double qWm = H3[j] / PJ;
       double qMum = wP * H1[j] * 2. / sigma;
-      double qSigmam = wP * c->sigmaSqR/2.*(H0[j] - 4.*H2[j]);//!!! error here, should be c->sigmaSqF
+      double qSigmam = wP * c->sigmaSqF/2.*(H0[j] - 4.*H2[j]);
       if(j > 0)
         scoreMiss[j-1] = qWm;
       scoreMiss[nComp-1+j] = qMum;

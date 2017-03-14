@@ -39,7 +39,6 @@ static void processSeg(struct InputData* seg, struct InputData* data, int32_t ex
     double infMat[(5*mix->nComp-1)*(5*mix->nComp-1)];
     int flag = getInfMat(seg, mix->comps, mix->nComp, infMat);
     if(flag == 0) {
-      memset(infMat, 0, sizeof infMat);// !!! zero infMat always???
       mergePeaks(mix->comps, &mix->nComp, infMat);
       computeScores(mix->comps, mix->nComp, seg, exp_read_count, ctrl_read_count);
       output(mix->comps, mix->nComp, seg->chr);
@@ -71,7 +70,7 @@ static void prepareSeg(struct InputData* seg, struct InputData* data, int32_t mi
       seg->U.e = seg->U.s;
 
     i = seg->U.e;
-    while(i < data->U.e && i->start < maxLoc) // !!! incorrect, should be i->start <= maxLoc, but this way it is done in original pics 
+    while(i < data->U.e && i->start <= maxLoc)
       ++i;
     seg->U.e = i;
   }
