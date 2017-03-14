@@ -58,3 +58,7 @@ static int read_chr_bed(struct BedReader* reader, char* chr, struct SliceInterva
      }
    }
 }
+
+static int bed_reader_has_more_sites(struct BedReader* reader) {
+  return reader->last != 0;
+}

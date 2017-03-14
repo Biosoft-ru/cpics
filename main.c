@@ -114,6 +114,11 @@ int main(int argc, char* argv[]) {
     free_input_data(&data);
   }
 
+  if( bed_reader_has_more_sites(&bed_reader) ) {
+    fprintf(stderr, "Distinct set of chromosomes or wrong order of chromosomes in unmappable bed file\n");
+    return 1;
+  } 
+
   close_bam_reader(&exp_bam_reader);
   if(Opt.ctrl_bam_file_name != 0)
     close_bam_reader(&ctrl_bam_reader);
