@@ -76,6 +76,7 @@ int main(int argc, char* argv[]) {
   int i;
   for(i = 0; i < nChr; i++) {
     char* exp_chr = exp_bam_reader.header->target_name[i];
+    fprintf(stderr, "Processing %s\n", exp_chr);
     if(Opt.ctrl_bam_file_name != 0) {
       char* ctrl_chr = ctrl_bam_reader.header->target_name[i];
       if(strcmp(exp_chr, ctrl_chr) != 0) {
@@ -98,6 +99,7 @@ int main(int argc, char* argv[]) {
     if(Opt.unmappable_file_name != 0) {
       if(read_chr_bed(&bed_reader, exp_chr, &data.U) != 0)
         return 1;
+      fprintf(stderr, "Found %i unmapped regions\n", (int)(data.U.e - data.U.s));
     }
 
     if(Opt.ctrl_bam_file_name != 0) {

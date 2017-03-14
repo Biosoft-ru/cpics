@@ -26,12 +26,17 @@ static int read_chr_bed(struct BedReader* reader, char* chr, struct SliceInterva
    int32_t capacity = 4;
    res->s = res->e = malloc(sizeof(struct Interval) * capacity);
    if(!reader->last) {
-     reader->last = malloc(sizeof(struct BedReader));
-     if(!reader->lastChr)
-       reader->lastChr = malloc(32);
-     int ret = fscanf(reader->file, "%31s %d %d", reader->lastChr, &(reader->last->start), &(reader->last->end));
+     char chr[32];
+     int32_t start, end;
+     int ret = fscanf(reader->file, "%31s %d %d", chr, &start, &end);
      if(ret != 3 )
        return 0;
+     reader->last = malloc(sizeof(struct Interval));
+     reader->last->start = start;
+     reader->last->end = end;
+     if(!reader->lastChr)
+       reader->lastChr = malloc(32);
+     strcpy(reader->lastChr, chr);
    }
    for(;;) {
      if(strcmp(reader->lastChr, chr) != 0)
