@@ -36,6 +36,8 @@ static void output(struct MixtureComp* comps, int32_t nComp, char* chr) {
     if(!score_filter_disabled && c.score <= Opt.score_cutoff) continue;
     if(c.delta <= 50 || c.delta >= 300) continue;
     if(c.se >= 50 || c.se <= 0) continue; //!!! ==0 ???
+    if(c.seF >= 50 || c.seF <= 0) continue; //!!! ==0 ???
+    if(c.seR >= 50 || c.seR <= 0) continue; //!!! ==0 ???
     if(c.sigmaSqF > 22500 || c.sigmaSqR > 22500) continue;
     int32_t from = (int32_t) (c.mu - c.delta/2 - 3*c.seF);
     int32_t to = (int32_t) (c.mu + c.delta/2 + 3*c.seR);
