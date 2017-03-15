@@ -4,6 +4,7 @@
 #include <htslib/sam.h>
 #include <htslib/hts.h>
 #include <math.h>
+#include <time.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_linalg.h>
@@ -76,7 +77,7 @@ int main(int argc, char* argv[]) {
   int i;
   for(i = 0; i < nChr; i++) {
     char* exp_chr = exp_bam_reader.header->target_name[i];
-    fprintf(stderr, "Processing %s\n", exp_chr);
+    fprintf(stderr, "Processing %s (%i of %i)\n", exp_chr, i+1, nChr);
     if(Opt.ctrl_bam_file_name != 0) {
       char* ctrl_chr = ctrl_bam_reader.header->target_name[i];
       if(strcmp(exp_chr, ctrl_chr) != 0) {
@@ -90,28 +91,33 @@ int main(int argc, char* argv[]) {
 
     if(read_chr_bam(&exp_bam_reader, i, &data.P, &data.N) != 0)
       return 1;
+    fprintf(stderr, "Load %td positive strand aligns\n", data.P.e - data.P.s);
+    fprintf(stderr, "Load %td negative strand aligns\n", data.N.e - data.N.s);
 
     if(Opt.ctrl_bam_file_name != 0) {
       if(read_chr_bam(&ctrl_bam_reader, i, &data.PC, &data.NC) != 0)
         return 1;
+      fprintf(stderr, "Load %td positive strand aligns from ctrl\n", data.PC.e - data.PC.s);
+      fprintf(stderr, "Load %td negative strand aligns from ctrl\n", data.NC.e - data.NC.s);
     }
 
     if(Opt.unmappable_file_name != 0) {
       if(read_chr_bed(&bed_reader, exp_chr, &data.U) != 0)
         return 1;
-      fprintf(stderr, "Found %i unmapped regions\n", (int)(data.U.e - data.U.s));
+      fprintf(stderr, "Load %td unmapped regions\n", data.U.e - data.U.s);
     }
 
     if(Opt.ctrl_bam_file_name != 0) {
       cpics_output_to_file(cpics_exp_out_file, cpics_exp_out_file_name);
-      process_chr(&data, exp_read_count, ctrl_read_count);
+      process_chr_timed(&data, exp_read_count, ctrl_read_count);
 
+      fprintf(stderr, "Swapping exp and control to compute FDR\n");
       swap_exp_ctrl(&data);
 
       cpics_output_to_file(cpics_ctrl_out_file, cpics_ctrl_out_file_name);
-      process_chr(&data, ctrl_read_count, exp_read_count);
+      process_chr_timed(&data, ctrl_read_count, exp_read_count);
     } else {
-      process_chr(&data, exp_read_count, ctrl_read_count);
+      process_chr_timed(&data, exp_read_count, ctrl_read_count);
     }
     free_input_data(&data);
   }
@@ -129,10 +135,12 @@ int main(int argc, char* argv[]) {
 
   if(Opt.ctrl_bam_file_name != 0) {
     close_tmp_files();
+    fprintf(stderr, "Computing FDR\n");
     compute_fdr();
   }
 
   close_out_file();
+  fprintf(stderr, "Done\n");
 
   return 0;
 }

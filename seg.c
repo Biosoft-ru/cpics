@@ -147,3 +147,11 @@ static void process_chr(struct InputData* data, int32_t exp_read_count, int32_t 
      processSeg(&seg, data, exp_read_count, ctrl_read_count);
   }
 }
+
+static void process_chr_timed(struct InputData* data, int32_t exp_read_count, int32_t ctrl_read_count) {
+  fprintf(stderr, "Calling peaks...");
+  clock_t start_time = clock();
+  process_chr(data, exp_read_count, ctrl_read_count);
+  double run_time = (double)(clock() - start_time)/CLOCKS_PER_SEC;
+  fprintf(stderr, "(%lfsec)\n", run_time);
+}

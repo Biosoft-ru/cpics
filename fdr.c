@@ -93,6 +93,7 @@ static void compute_fdr() {
 
 
   double score_cutoff = compute_score_cutoff(exp_scores, exp_count, ctrl_scores, ctrl_count);
+  fprintf(stderr, "Using %e score cutoff for FDR < %lf\n", score_cutoff, Opt.fdr_cutoff);
 
   free(exp_scores);
   free(ctrl_scores);
