@@ -18,8 +18,8 @@
 #include "seg.c"
 #include "bam.c"
 #include "bed.c"
+#include "chrs.c"
 #include "fdr.c"
-
 
 int main(int argc, char* argv[]) {
   if(parse_args(argc, argv) != 0)
@@ -29,35 +29,31 @@ int main(int argc, char* argv[]) {
   init_tdist4();
 
   struct BamReader exp_bam_reader;
-  if(open_bam_reader(Opt.exp_bam_file_name, &exp_bam_reader) != 0) {
-    fprintf(stderr, "Can not read bam file %s\n", Opt.exp_bam_file_name);
-    return 1;
+  open_bam_reader(Opt.exp_bam_file_name, &exp_bam_reader);
+
+  char** chrs = 0;
+  int n_chrs;
+  if(Opt.chr_file_name) {
+    chrs = load_chromosomes(&n_chrs);
+  } else {
+    chrs = exp_bam_reader.header->target_name;
+    n_chrs = exp_bam_reader.header->n_targets;
   }
-  int nChr = exp_bam_reader.header->n_targets;
+  int32_t exp_chr_ids[n_chrs];
+  match_chrs(&exp_bam_reader, chrs, n_chrs, exp_chr_ids);
 
   struct BamReader ctrl_bam_reader;
+  int32_t ctrl_chr_ids[n_chrs];
   int32_t ctrl_read_count = 0;
   int32_t exp_read_count = 0;
   if(Opt.ctrl_bam_file_name != 0) {
-    if(open_bam_reader(Opt.ctrl_bam_file_name, &ctrl_bam_reader) != 0) {
-      fprintf(stderr, "Can not read bam file %s\n", Opt.ctrl_bam_file_name);
-      return 1;
-    }
-    if(ctrl_bam_reader.header->n_targets != nChr) {
-      fprintf(stderr, "Distinct BAM headers in exp and ctrl files.\n");
-      return 1;
-    }
+    open_bam_reader(Opt.ctrl_bam_file_name, &ctrl_bam_reader);
+    match_chrs(&ctrl_bam_reader, chrs, n_chrs, ctrl_chr_ids);
+
     //We need total read counts only when control dataset exists.
-    exp_read_count = count_mapped_reads(&exp_bam_reader);
-    if(exp_read_count < 0) {
-      fprintf(stderr, "Could not count reads using bam index file\n");
-      return 1;
-    }
-    ctrl_read_count = count_mapped_reads(&ctrl_bam_reader);
-    if(ctrl_read_count < 0) {
-      fprintf(stderr, "Could not count reads for ctrl using bam index file\n");
-      return 1;
-    }
+    exp_read_count = count_mapped_reads(&exp_bam_reader, exp_chr_ids, n_chrs);
+    ctrl_read_count = count_mapped_reads(&ctrl_bam_reader, ctrl_chr_ids, n_chrs);
+
     //disable score filter to calculate fdr
     cpics_disable_score_filter();
   }
@@ -75,28 +71,19 @@ int main(int argc, char* argv[]) {
     open_tmp_files("w");
 
   int i;
-  for(i = 0; i < nChr; i++) {
-    char* exp_chr = exp_bam_reader.header->target_name[i];
-    fprintf(stderr, "Processing %s (%i of %i)\n", exp_chr, i+1, nChr);
-    if(Opt.ctrl_bam_file_name != 0) {
-      char* ctrl_chr = ctrl_bam_reader.header->target_name[i];
-      if(strcmp(exp_chr, ctrl_chr) != 0) {
-        fprintf(stderr, "Distinct BAM headers in exp and ctrl files.\n");
-        return 1;
-      }
-    }
+  for(i = 0; i < n_chrs; i++) {
+    char* exp_chr = chrs[i];
+    fprintf(stderr, "Processing %s (%i of %i)\n", exp_chr, i+1, n_chrs);
 
     struct InputData data = {0};
     data.chr = exp_chr;
 
-    if(read_chr_bam(&exp_bam_reader, i, &data.P, &data.N) != 0)
-      return 1;
+    read_chr_bam(&exp_bam_reader, exp_chr_ids[i], &data.P, &data.N);
     fprintf(stderr, "Load %td positive strand aligns\n", data.P.e - data.P.s);
     fprintf(stderr, "Load %td negative strand aligns\n", data.N.e - data.N.s);
 
     if(Opt.ctrl_bam_file_name != 0) {
-      if(read_chr_bam(&ctrl_bam_reader, i, &data.PC, &data.NC) != 0)
-        return 1;
+      read_chr_bam(&ctrl_bam_reader, ctrl_chr_ids[i], &data.PC, &data.NC);
       fprintf(stderr, "Load %td positive strand aligns from ctrl\n", data.PC.e - data.PC.s);
       fprintf(stderr, "Load %td negative strand aligns from ctrl\n", data.NC.e - data.NC.s);
     }
@@ -138,6 +125,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Computing FDR\n");
     compute_fdr();
   }
+
+  if(Opt.chr_file_name)
+    free_chromosomes(chrs, n_chrs);
 
   close_out_file();
   fprintf(stderr, "Done\n");

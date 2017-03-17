@@ -17,3 +17,8 @@ static int double_cmp(const void* a, const void* b) {
 
 static inline int32_t min(int32_t a, int32_t b) { return a < b ? a : b; }
 static inline int32_t max(int32_t a, int32_t b) { return a < b ? b : a; }
+
+static inline void out_of_mem() {
+  fprintf(stderr, "Can not allocate memory\n");
+  exit(1);
+}
