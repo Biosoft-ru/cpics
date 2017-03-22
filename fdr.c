@@ -76,8 +76,7 @@ static double compute_score_cutoff(double* exp, int32_t exp_count, double* ctrl,
     prev_fdr = fdr;
   }
 
-  //impossible
-  return -1;
+  return INFINITY;
 }
 
 static void compute_fdr() {
